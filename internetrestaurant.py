@@ -1,31 +1,66 @@
 from xmlrestaurant import *
 from http.client import HTTPConnection
 from http.server import BaseHTTPRequestHandler, HTTPServer
-
+                           
 ##global
 conn = None
 ###################
 regKey = "3n0ay%2Fk%2BocRtQBOiPEJNJ7hJNqBuoC1%2F2d%2BQY7GDxFynWHRxFJJM2Hm1MYFTyoe%2BVswgU6XVD%2BuDqwrOXOVUjA%3D%3D"
 server = "api.visitkorea.or.kr"
 
-def userURIBuilder(server,**user): # ** 사전 형식으로 받는다
+# smtp 정보
+host = "smtp.gmail.com" # Gmail SMTP 서버 주소.
+port = "587"
+
+# 리스트 url #
+def userURIBuilder(server,**user):
+     str = "http://" + server + "/openapi/service/rest/KorService/areaBasedList?"
+     for key in user.keys():
+         str += key + "=" + user[key] + "&"
+     return str
+
+# 좌표로 구하는 url #
+def userURIBuilderPosition(server,**user): # ** 사전 형식으로 받는다
     #str = "http://" + server + "/search" + "?"
     str = "http://" + server + "/openapi/service/rest/KorService/locationBasedList?"
     for key in user.keys():
         str += key + "=" + user[key] + "&"
     return str
+
+# 키워드로 구하는 url #
+def userURIBuilderKeyword(server,**user):
+    str = "http://" + server+"/openapi/service/rest/KorService/searchKeyword?"
+    for key in user.keys():
+        str += key +"=" + user[key]+"&"
+    return str
     
 def connectOpenAPIServer():
     global conn, server
     conn = HTTPConnection(server)
+
+def getRestaurantDataForList():
+    global server, regKey, conn
+    if conn == None :
+        connectOpenAPIServer()
+    uri = userURIBuilder(server,ServiceKey=regKey,contentTypeId='39',areaCode='',sigunguCode='',cat1='A05',cat2='A0502',cat3='',listYN='Y',MobileOS='ETC',MobileApp='TourAPI3.0_Guide',arrange='A',numOfRows='20',pageNo='1')
+    conn.request("GET", uri)
+    
+    req = conn.getresponse()
+    print (req.status)
+    if int(req.status) == 200 :
+        print("Restaurant data downloading complete!")
+        return extractRestaurantData(req.read())
+    else:
+        print ("OpenAPI request has been failed!! please retry")
+        return None
         
+# 좌표 기반 #
 def getRestaurantDataFromContent(inputX,inputY):
     global server, regKey, conn
     if conn == None :
         connectOpenAPIServer()
-   # uri = userURIBuilder(server, key=regKey, query='%20', display="1", start="1", target="book_adv", d_isbn=isbn)
 
-    uri = userURIBuilder(server, ServiceKey=regKey, contentTypeId='39', mapX=inputX,mapY=inputY,radius='500',pageNo='1',numOfRows='10',listYN='Y',arrange='A',MobileOS='ETC',MobileApp='AppTestin') 
+    uri = userURIBuilderPosition(server, ServiceKey=regKey, contentTypeId='39', mapX=inputX,mapY=inputY,radius='500',pageNo='1',numOfRows='74',listYN='Y',arrange='A',MobileOS='ETC',MobileApp='AppTestin') 
     conn.request("GET", uri)
     
     req = conn.getresponse()
@@ -37,19 +72,138 @@ def getRestaurantDataFromContent(inputX,inputY):
         print ("OpenAPI request has been failed!! please retry")
         return None
 
+# 키워드 기반 #
+def getRestaurantDataFromKeyword(word):
+    global server,regkey,conn
+    if conn == None :
+        connectOpenAPIServer()
+        
+    import urllib
+    #newkeyword =  URLEncoder.encode(word,"UTF-8");
+    newkeyword = urllib.parse.quote(word)
+    uri = userURIBuilderKeyword(server,ServiceKey=regKey,keyword=newkeyword,contentTypeId='39',arrange='A',listYN='Y',pageNo='1',numOfRows='20',MobileOS='ETC',MobileApp='AppTesting')
+    conn.request("GET", uri)
+    
+    req = conn.getresponse()
+    print (req.status)
+    if int(req.status) == 200 :
+        print("Restaurant data downloading complete!")
+        return extractRestaurantData(req.read())
+    else:
+        print ("OpenAPI request has been failed!! please retry")
+        return None
+
+
 def extractRestaurantData(strXml):
     from xml.etree import ElementTree
     tree = ElementTree.fromstring(strXml)
-    #print (strXml)
+
     # restaurant 엘리먼트를 가져옵니다.
-    itemElements = tree.getiterator("item")  # return list type
-    #print(itemElements)
+    itemElements = tree.getiterator("item")
+
     for item in itemElements:
-        inputX = item.find("MapX")
-        inputY = item.find("MapY")
         strTitle = item.find("title")
         strAddr1 = item.find("addr1")
-        #print (strTitle)
-        if len(strTitle.text) > 0 :
-           return print(strTitle.text," : ",strAddr1.text)#{"contentid":contentid.text,"title":strTitle.text}
+        strTel = item.find("tel")
+        strDist = item.find("dist")
+        if  strTel ==None or strDist == None:
+           print("가게 명 : ",strTitle.text)
+           print("주소 : ",strAddr1.text)
+           print()
+        elif strDist != None:
+           print("가게 명 : ",strTitle.text)
+           print("주소 : ",strAddr1.text)
+           print("전화번호 : ",strTel.text)
+           print("떨어진 거리 : ",strDist.text,'m')
+           print()
+        else:
+           print("가게 명 : ",strTitle.text)
+           print("주소 : ",strAddr1.text)
+           print("전화번호 : ",strTel.text)
+           print()
            
+    
+def sendMain():
+    global host, port
+    html = ""
+    title = str(input ('Title :'))
+    senderAddr = str(input ('sender email address :'))
+    recipientAddr = str(input ('recipient email address :'))
+    msgtext = str(input ('write message :'))
+    passwd = str(input (' input your password of gmail account :'))
+    msgtext = str(input ('Do you want to include restaurant data (y/n):'))
+    
+    if msgtext == 'y' :
+        html = MakeHtmlDoc(strXml)
+    
+    import smtplib
+    # MIMEMultipart의 MIME을 생성합니다.
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    
+    #Message container를 생성합니다.
+    msg = MIMEMultipart('alternative')
+
+    #set message
+    msg['Subject'] = title
+    msg['From'] = senderAddr
+    msg['To'] = recipientAddr
+    
+    msgPart = MIMEText(msgtext, 'plain')
+    bookPart = MIMEText(html, 'html', _charset = 'UTF-8')
+    
+    # 메세지에 생성한 MIME 문서를 첨부합니다.
+    msg.attach(msgPart)
+    msg.attach(bookPart)
+    
+    print ("connect smtp server ... ")
+    s = smtplib.SMTP(host,port)
+    #s.set_debuglevel(1)
+    s.ehlo()
+    s.starttls()
+    s.ehlo()
+    s.login(senderAddr, passwd)    # 로긴을 합니다. 
+    s.sendmail(senderAddr , [recipientAddr], msg.as_string())
+    s.close()
+    
+    print ("Mail sending complete!!!")
+
+def MakeHtmlDoc(strXml):
+    keyword = str(input ('input keyword to search:'))
+    getRestaurantDataFromKeyword(keyword)
+    
+    newdoc = strXml.createDocument(None, "html", None)  #DOM 객체 생성
+    top_element = newdoc.documentElement
+    header = newdoc.createElement('header')
+    top_element.appendChild(header)
+
+    # Body 엘리먼트 생성.
+    body = newdoc.createElement('body')
+
+    for bookitem in BookList:
+        #create bold element
+        b = newdoc.createElement('b')
+        #create text node
+        addr1Text = newdoc.createTextNode("Addr1:" + bookitem[0])
+        b.appendChild(addr1Text)
+
+        body.appendChild(b)
+    
+        # BR 태그 (엘리먼트) 생성.
+        br = newdoc.createElement('br')
+
+        body.appendChild(br)
+
+        #create title Element
+        p = newdoc.createElement('p')
+        #create text node
+        titleText= newdoc.createTextNode("Title:" + bookitem[1])
+        p.appendChild(titleText)
+
+        body.appendChild(p)
+        body.appendChild(br)  #line end
+         
+    #append Body
+    top_element.appendChild(body)
+    
+    return newdoc.toxml()

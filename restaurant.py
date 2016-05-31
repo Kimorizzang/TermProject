@@ -5,24 +5,27 @@ loopFlag = 1 # 루프 제어 변수
 ###############
 
 #Menu(console)
+
 def PrintMenu():
     print('=====RestaurantMenu=====')
     print('1.PrintAll : a ')
     print('2.SearchKeyword : k ')
     print('3.SearchPosition : p ')
-    print('4.QuitProgram : q ')
+    print('4.SendEMail : e ')
+    print('5.QuitProgram : q ')
     
-def launcherFunction(menu): 
+def launcherFunction(menu):
     if menu == 'a':
-        PrintRList(["title ",])
-    
+        getRestaurantDataForList()    
     elif menu == 'k':
-        keyword = str(input ('input keyword to search :'))
-        PrintRList(SearchAddr(keyword))
+        Keyword = str(input ('input keyword to search :'))
+        getRestaurantDataFromKeyword(Keyword)
     elif menu == 'p':
         inputX = str(input('input X :'))
         inputY = str(input('input Y :'))
         getRestaurantDataFromContent(inputX,inputY)
+    elif menu == 'e':
+        sendMain()
     elif menu == 'q':
         QuitRestaurantkMgr()
         
@@ -38,4 +41,5 @@ while(loopFlag > 0):
     launcherFunction(menuKey)
 else:
     print ("Thank you! Good Bye")
-        
+     
+     
