@@ -15,15 +15,14 @@ def PrintMenu():
     print('5.QuitProgram : q ')
     
 def launcherFunction(menu):
-    if menu == 'a':
-        getRestaurantDataForList()    
-    elif menu == 'k':
+    if menu == 'k':
         Keyword = str(input ('input keyword to search :'))
         getRestaurantDataFromKeyword(Keyword)
     elif menu == 'p':
-        inputX = str(input('input X :'))
-        inputY = str(input('input Y :'))
-        getRestaurantDataFromContent(inputX,inputY)
+        Position = str(input('input your position : '))
+        #inputX = str(input('input X :'))
+        #inputY = str(input('input Y :'))
+        getRestaurantDataFromContent(Position)
     elif menu == 'e':
         sendMain()
     elif menu == 'q':
