@@ -413,9 +413,9 @@ class Ui_Form(object):
                  if strDist != None:
                      l = [strTitle.text,strAddr1.text,strTel.text,strDist.text]
                  elif strTel != None:
-                     l =  [strTitle.text,strAddr1.text,strTel.text]
-                 elif strTel == None and strDist == None:
-                     l = [strTitle.text,strAddr1.text]
+                     l =  [strTitle.text,strAddr1.text,strTel.text,' ']
+                 elif strTel == None or strDist == None:
+                     l = [strTitle.text,strAddr1.text,' ',' ']
                  else : l = None
 
                  ret.append(l)
@@ -440,6 +440,7 @@ class Ui_Form(object):
             
         ########입력한 position으로 구글 맵에서 위도 경도 구해오기 #######
         import urllib
+        import urllib.request
         import json        
         
         Position = self.position_lineEdit.text()        
